@@ -1,0 +1,41 @@
+<?php
+session_start();
+
+// $clientID = 'YOUR_GITHUB_CLIENT_ID';
+// $clientSecret = 'YOUR_GITHUB_CLIENT_SECRET';
+$client_id = getenv('GOOGLE_CLIENT_ID');
+$client_secret = getenv('GOOGLE_CLIENT_SECRET');
+
+if (isset($_GET['code'])) {
+    $code = $_GET['code'];
+    // Exchange code for access token
+    $opts = [
+        'http' => [
+            'method' => "POST",
+            'header' => "Accept: application/json\r\n"
+        ]
+    ];
+    $context = stream_context_create($opts);
+    $response = file_get_contents(
+        "https://github.com/login/oauth/access_token?client_id=$clientID&client_secret=$clientSecret&code=$code",
+        false,
+        $context
+    );
+    $data = json_decode($response, true);
+    $accessToken = $data['access_token'];
+
+    // Get user info
+    $opts2 = [
+        'http' => [
+            'method' => "GET",
+            'header' => "User-Agent: PHP\r\nAuthorization: token $accessToken\r\n"
+        ]
+    ];
+    $context2 = stream_context_create($opts2);
+    $userJson = file_get_contents("https://api.github.com/user", false, $context2);
+    $user = json_decode($userJson, true);
+
+    $_SESSION['user'] = $user['login'];
+    header('Location: index.php');
+    exit;
+}
